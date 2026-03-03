@@ -30,7 +30,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BODY: ${{ github.event.pull_request.body }}
-          TARGET_URL: "http://localhost:8080" # The local test app URL
+          TARGET_URL: "http://localhost:8080/app/index.html" # The local test app URL
         run: |
           docker run --network host \
             -e GROQ_API_KEY=$GROQ_API_KEY \

@@ -73,9 +73,9 @@ def generate_tests(state: AgentState):
     2. Start the script with imports (import pytest, from playwright.sync_api import sync_playwright).
     3. Use synchronous Playwright. 
     4. Write tests as functions starting with `test_` for Pytest to discover them.
-    5. Include comments explaining the test steps.
-    6. Ensure the test uses headless mode.
-    7. Set a very short timeout for page actions, e.g. `page.set_default_timeout(3000)` so tests fail fast if selectors are wrong.
+    5. Ensure the test uses headless mode.
+    6. Set a very short timeout for page actions, e.g. `page.set_default_timeout(3000)` so tests fail fast if selectors are wrong.
+    7. ABSOLUTELY DO NOT explicitly comment out test assertions or actions. Do not write "Since the provided HTML does not contain...". Write the actual test logic based ON THE HTML PROVIDED. If a field doesn't exist in the HTML, DO NOT test it. Only test the elements that are actually present.
     """
     
     # If this is a retry attempt, feed the failure logs back into the LLM
