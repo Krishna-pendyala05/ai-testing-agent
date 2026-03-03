@@ -5,20 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simple Target Application</title>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
-      }
-      .success {
-        color: green;
-        display: none;
-        margin-top: 10px;
-      }
-      .error {
-        color: red;
-        display: none;
-        margin-top: 10px;
-      }
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      .success { color: green; display: none; margin-top: 10px; }
+      .error { color: red; display: none; margin-top: 10px; }
     </style>
   </head>
   <body>
@@ -32,8 +21,7 @@
       <label for="cardNumber">Card Number:</label><br />
       <input type="text" id="cardNumber" required /><br /><br />
 
-      <!-- The button the PR mentioned -->
-      <button id="submitOrderBtn">Submit Order</button>
+      <button id="completePurchase">Submit Order</button>
     </div>
 
     <div id="successMsg" class="success">Order processed successfully!</div>
@@ -41,13 +29,15 @@
 
     <script>
       document
-        .getElementById("submitOrderBtn")
+        .getElementById("completePurchase")
         .addEventListener("click", function () {
           const email = document.getElementById("email").value;
           const card = document.getElementById("cardNumber").value;
 
-          // Validate: both fields must be filled AND email must be a valid format
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          // BUG 2: Added a restrictive check that only allows .com emails
+          // This will cause a 'False Negative' for valid .org or .net emails.
+          const emailRegex = /^[^\s@]+@[^\s@]+\.com$/; 
+          
           if (email && card && emailRegex.test(email)) {
             document.getElementById("successMsg").style.display = "block";
             document.getElementById("errorMsg").style.display = "none";
