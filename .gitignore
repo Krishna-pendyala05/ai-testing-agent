@@ -14,3 +14,12 @@ __pycache__/
 # IDE files
 .vscode/
 .idea/
+
+# Node.js
+node_modules/
+package-lock.json
+package.json
+
+# Artifacts
+artifact-results/
+report.html
