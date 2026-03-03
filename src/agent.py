@@ -93,49 +93,54 @@ def generate_tests(state: AgentState):
 # Node 3: Execution Monitor (Local Simulation)
 # ---------------------------------------------------------
 # In production, this would dispatch to the Docker sandbox. 
-# For local testing, we execute in a temporary directory.
+# We execute in a `/workspace` directory that can be mounted as a volume.
 def execute_tests(state: AgentState):
     code = state["generated_test_code"]
     current_retries = state.get("retry_count", 0)
     
     print(f"Agent: Executing generated test script. Standby...")
     
-    # Save code to a temporary test file
-    import tempfile
-    test_dir = tempfile.mkdtemp()
-    test_file_path = os.path.join(test_dir, "test_generated.py")
+    # Save code to a mounted workspace directory
+    workspace_dir = "/workspace"
+    if not os.path.exists(workspace_dir):
+        os.makedirs(workspace_dir, exist_ok=True)
+        
+    test_file_path = os.path.join(workspace_dir, "test_generated.py")
     
-    try:
-        with open(test_file_path, "w") as f:
-            f.write(code)
-            
-        print(f"\n--- GENERATED TEST CODE ---\n{code}\n---------------------------\n")
+    with open(test_file_path, "w") as f:
+        f.write(code)
         
-        # Execute the test using pytest
-        import subprocess
-        result = subprocess.run(
-            ["pytest", test_file_path, "-v", "--tb=short"], 
-            capture_output=True, 
-            text=True
-        )
+    print(f"\n--- GENERATED TEST CODE (Saved to {test_file_path}) ---\n{code}\n---------------------------\n")
+    
+    # Execute the test using pytest, generating an HTML report and Playwright traces
+    import subprocess
+    result = subprocess.run(
+        [
+            "pytest", 
+            test_file_path, 
+            "-v", 
+            "--tb=short",
+            f"--html={os.path.join(workspace_dir, 'report.html')}",
+            f"--tracing=retain-on-failure",
+            f"--output={os.path.join(workspace_dir, 'test-results')}"
+        ], 
+        capture_output=True, 
+        text=True
+    )
+    
+    status = "success" if result.returncode == 0 else "failed"
+    logs = result.stdout + "\n" + result.stderr
+    
+    print(f"Agent: Execution finished with status: {status.upper()}")
+    if status == "failed":
+        print(f"Agent: Errors detected. Preparing to self-heal.")
+        print(f"--- PYTEST LOGS ---\n{logs}\n-------------------")
         
-        status = "success" if result.returncode == 0 else "failed"
-        logs = result.stdout + "\n" + result.stderr
-        
-        print(f"Agent: Execution finished with status: {status.upper()}")
-        if status == "failed":
-            print(f"Agent: Errors detected. Preparing to self-heal.")
-            print(f"--- PYTEST LOGS ---\n{logs}\n-------------------")
-            
-        return {
-            "execution_status": status,
-            "execution_logs": logs,
-            "retry_count": current_retries + 1
-        }
-    finally:
-        # Cleanup
-        if os.path.exists(test_file_path):
-            os.remove(test_file_path)
+    return {
+        "execution_status": status,
+        "execution_logs": logs,
+        "retry_count": current_retries + 1
+    }
             
 # ---------------------------------------------------------
 # Graph Routing Logic
