@@ -94,6 +94,8 @@ def execute_tests(state: AgentState):
         with open(test_file_path, "w") as f:
             f.write(code)
             
+        print(f"\n--- GENERATED TEST CODE ---\n{code}\n---------------------------\n")
+        
         # Execute the test using pytest
         import subprocess
         result = subprocess.run(
@@ -108,6 +110,7 @@ def execute_tests(state: AgentState):
         print(f"Agent: Execution finished with status: {status.upper()}")
         if status == "failed":
             print(f"Agent: Errors detected. Preparing to self-heal.")
+            print(f"--- PYTEST LOGS ---\n{logs}\n-------------------")
             
         return {
             "execution_status": status,
