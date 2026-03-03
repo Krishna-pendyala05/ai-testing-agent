@@ -48,11 +48,25 @@ def analyze_requirements(state: AgentState):
 # ---------------------------------------------------------
 def generate_tests(state: AgentState):
     print(f"Agent: Generating Python/Playwright test script (Attempt {state.get('retry_count', 0) + 1})...")
+    
+    # Try to fetch the HTML of the target app to give the LLM context
+    import urllib.request
+    try:
+        req = urllib.request.urlopen(state['target_url'])
+        html_context = req.read().decode('utf-8')
+    except Exception as e:
+        html_context = f"Could not fetch HTML: {e}"
+        
     prompt = f"""You are an expert SDET (Software Development Engineer in Test).
     Write a complete Python Playwright script using Pytest to test these requirements:
     {state.get('test_requirements', '')}
     
     The target URL is: {state['target_url']}
+    
+    Here is the DOM/HTML of the target page to help you write accurate selectors. Do not hallucinate fields that do not exist in this HTML:
+    ```html
+    {html_context}
+    ```
     
     CRITICAL INSTRUCTIONS:
     1. Output ONLY valid, runnable Python code. NO markdown formatting, NO explanations.
@@ -61,6 +75,7 @@ def generate_tests(state: AgentState):
     4. Write tests as functions starting with `test_` for Pytest to discover them.
     5. Include comments explaining the test steps.
     6. Ensure the test uses headless mode.
+    7. Set a very short timeout for page actions, e.g. `page.set_default_timeout(3000)` so tests fail fast if selectors are wrong.
     """
     
     # If this is a retry attempt, feed the failure logs back into the LLM
