@@ -46,8 +46,9 @@
           const email = document.getElementById("email").value;
           const card = document.getElementById("cardNumber").value;
 
-          // Simple validation
-          if (email && card) {
+          // Validate: both fields must be filled AND email must be a valid format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (email && card && emailRegex.test(email)) {
             document.getElementById("successMsg").style.display = "block";
             document.getElementById("errorMsg").style.display = "none";
           } else {

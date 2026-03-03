@@ -1,64 +1,184 @@
-# Autonomous AI Testing Agent 🤖🧪
+# Autonomous AI Testing Agent 🤖
 
-An autonomous, LLM-powered "digital coworker" that integrates directly into your CI/CD pipeline to dynamically generate, execute, and self-heal end-to-end (E2E) UI tests on every Pull Request.
+An **AI-powered QA coworker** that integrates directly into your GitHub CI/CD pipeline. When a Pull Request is opened, this agent automatically:
 
-## 🌟 The Problem it Solves
+1. 🔍 **Inspects** the live target application's DOM to find real element selectors
+2. 📋 **Reads** the PR description to understand what changed
+3. ✍️ **Generates** Playwright/Pytest test scripts using actual selectors (no guessing)
+4. ▶️ **Executes** the tests in a Docker sandbox
+5. 🔄 **Self-heals** if the scripts error (up to 3 retries, without weakening assertions)
+6. 💬 **Posts** a formatted test results comment directly on the PR
 
-QA engineers currently spend a disproportionate amount of time updating brittle E2E tests (e.g., when a UI selector changes due to a refactor) rather than designing edge-case exploratory tests.
+---
 
-This agent shifts quality assurance completely left. By catching regressions at the Pull Request stage automatically, and actively _repairing_ broken test scripts when UI elements change, the cost of maintaining test coverage drops exponentially.
+## Architecture
 
-## 🚀 Key Features
+```
+PR Opened → GitHub Actions → Docker Container
+                                    │
+                            ┌───────▼────────┐
+                            │  inspect_page  │ ← Playwright scrapes live DOM
+                            └───────┬────────┘
+                            ┌───────▼────────────────┐
+                            │  analyze_requirements  │ ← LLM reads PR + DOM
+                            └───────┬────────────────┘
+                            ┌───────▼────────┐
+                            │ generate_tests │ ← LLM writes Pytest script
+                            └───────┬────────┘
+                            ┌───────▼────────┐
+                            │ execute_tests  │ ← Pytest + Playwright runs
+                            └───────┬────────┘
+                          pass? ◄───┘──► fail & retries < 3?
+                            │                     │
+                            └──────┬──────────────┘
+                            ┌──────▼───────┐
+                            │report_results│ ← PyGithub posts PR comment
+                            └──────────────┘
+```
 
-- **Requirements Analyst:** Reads the PR diff and description to understand exactly what needs to be tested.
-- **Dynamic Script Generation:** Uses **Llama 3 (via Groq)** to write a Python Playwright/Pytest script tailored to the PR's changes.
-- **Self-Healing Execution:** Executes the generated tests in an isolated Docker sandbox. If a test fails due to a changed DOM selector, it analyzes the stack trace and attempts to rewrite and fix the script autonomously.
-- **CI/CD Native:** Runs fully within **GitHub Actions** (`.github/workflows/ai-qa.yml`), requiring no external infrastructure.
-- **100% Free / Open Source Stack:** Built with LangGraph, Playwright, Pytest, and the Groq API (generous free tier).
+**Tech Stack:** Python · LangGraph (ReAct) · LangChain-Groq (Llama 3 70B) · Playwright · Pytest · Docker · GitHub Actions · PyGithub
 
-## 🛠️ Architecture & Tech Stack
+---
 
-- **Orchestration:** [LangGraph](https://python.langchain.com/docs/langgraph) (Provides fine-grained state control for cyclic retry/healing loops).
-- **LLM Engine:** Llama 3 70B via the [Groq API](https://console.groq.com/).
-- **Testing Framework:** Playwright for Python + Pytest.
-- **Environment:** Ephemeral Docker Containers (`mcr.microsoft.com/playwright/python`).
+## Quick Start (Local Development)
 
-## ⚙️ How it Works in CI/CD
+### Prerequisites
 
-1. A developer opens a Pull Request on GitHub.
-2. The GitHub Action workflow is triggered.
-3. The Target Application is spun up locally in the GitHub runner.
-4. The Agent Docker container runs, passing the PR details and Target URL to the LangGraph brain.
-5. The LLM generates the Pytest script, runs it via Playwright, and iterates if necessary.
-6. The test results (and any bug findings) are reported.
+- Python 3.10+
+- Node.js (for `npx serve`, optional)
+- A Groq API key (free at [console.groq.com](https://console.groq.com))
 
-## 💻 Local Setup (For Development)
+### 1. Install dependencies
 
-1. Clone the repository.
-   ```bash
-   git clone https://github.com/your-username/ai-testing-agent.git
-   ```
-2. Set up the virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   playwright install chromium
-   ```
-4. Add your API key to a `.env` file:
-   ```env
-   GROQ_API_KEY=gsk_your_key_here
-   ```
-5. Run the agent locally:
-   ```bash
-   python src/agent.py
-   ```
+```bash
+pip install -r requirements.txt
+playwright install chromium
+```
 
-## 📝 Future Roadmap
+### 2. Set environment variables
 
-- [ ] Connect `PyGithub` to post Execution Reports directly as PR Comments.
-- [ ] Add Visual Regression Support (Screenshot Diffing).
-- [ ] Support complex multi-step authentication flows.
+```bash
+# Create a .env file (already gitignored)
+echo "GROQ_API_KEY=your_groq_api_key_here" > .env
+```
+
+### 3. Start the target demo app
+
+```bash
+# In one terminal:
+python -m http.server 8080 --directory app
+```
+
+### 4. Run the agent
+
+```bash
+# In another terminal:
+python src/agent.py
+```
+
+**Expected output:**
+
+```
+[Agent] Starting in Local Dev Mode
+[Agent] Step 1/4 — Inspecting live page at http://localhost:8080 ...
+--- DOM INSPECTION REPORT ---
+Page Title: Simple Target Application
+Form Fields:
+  <input type="email" id="email" ...> [REQUIRED]
+  <input type="text" id="cardNumber" ...> [REQUIRED]
+Buttons:
+  <button id="submitOrderBtn">: "Submit Order"
+Feedback / Message Elements:
+  id="successMsg": "Order processed successfully!"
+  id="errorMsg": "Please fill out all fields."
+--- END DOM INSPECTION REPORT ---
+
+[Agent] Step 2/4 — Analyzing PR requirements ...
+[Agent] Step 3/4 — Generating test script (Attempt 1) ...
+[Agent] Step 4/4 — Executing test script (Attempt 1) ...
+...
+```
+
+---
+
+## CI/CD Setup (GitHub Actions)
+
+### 1. Add your Groq API key as a secret
+
+Go to your repo → **Settings → Secrets and variables → Actions → New repository secret**
+
+- Name: `GROQ_API_KEY`
+- Value: your Groq API key
+
+> **Note:** `GITHUB_TOKEN` is automatically provided by GitHub Actions — no setup needed.
+
+### 2. The workflow triggers automatically
+
+Every time a PR is opened or updated, the `ai-qa` job runs and posts a comment like:
+
+---
+
+> **🤖 Autonomous AI Testing Agent Report**
+>
+> **Status: ✅ PASSED** | Attempts: 1
+>
+> | Metric       | Value                   |
+> | ------------ | ----------------------- |
+> | Target URL   | `http://localhost:8080` |
+> | Tests Passed | ✅ 5                    |
+> | Tests Failed | —                       |
+
+---
+
+### 3. View the HTML Report
+
+After each run, the full test report is uploaded as a GitHub Actions artifact named **`ai-test-report`** and retained for 14 days.
+
+---
+
+## Project Structure
+
+```
+ai-testing-agent/
+├── .github/
+│   └── workflows/
+│       └── ai-qa.yml           # GitHub Actions CI workflow
+├── app/
+│   └── index.html              # Demo target application (checkout form)
+├── artifact-results/           # Sample outputs from a real CI run
+│   ├── test_generated.py       # Example generated test script
+│   ├── report.html             # Example HTML test report
+│   ├── conftest.py             # Pytest report customization
+│   └── pytest.ini              # Pytest configuration
+├── src/
+│   ├── agent.py                # Main LangGraph agent (4 nodes + routing)
+│   └── tools/
+│       └── page_inspector.py   # Playwright DOM scraper tool
+├── Dockerfile                  # Agent container definition
+├── requirements.txt            # Python dependencies
+└── README.md
+```
+
+---
+
+## How the Agent Self-Heals (and Why It's Trustworthy)
+
+The agent distinguishes between two types of failures:
+
+| Failure Type                                                    | Agent Action                                                    |
+| --------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Python/API Error** (e.g. wrong method name, `AttributeError`) | Fixes the code, keeps all assertions                            |
+| **Assertion Failure** (test ran, app behavior wrong)            | Keeps the assertion — marks the **app** as broken, NOT the test |
+
+This means the agent will never "cheat" by lowering expectations to make tests pass. If the application has a real bug, the agent will report a failure.
+
+---
+
+## Environment Variables
+
+| Variable            | Required  | Description                                      |
+| ------------------- | --------- | ------------------------------------------------ |
+| `GROQ_API_KEY`      | ✅ Always | Groq LLM API key                                 |
+| `GITHUB_TOKEN`      | CI only   | Auto-provided by GitHub Actions                  |
+| `GITHUB_REPOSITORY` | CI only   | Auto-provided (`owner/repo`)                     |
+| `WORKSPACE_DIR`     | CI only   | Directory for test artifacts (default: temp dir) |

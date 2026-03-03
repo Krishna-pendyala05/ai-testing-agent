@@ -9,33 +9,73 @@ jobs:
     runs-on: ubuntu-latest
     name: Run AI QA Agent
 
+    permissions:
+      pull-requests: write # Required to post PR comments
+      contents: read
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Here we would typically build or start the target application
-      # e.g.: docker-compose up -d test-app
-      - name: Start Target Application (Mock)
+      # -----------------------------------------------------------------------
+      # Start the target application as a proper background service.
+      # We serve the app/ directory explicitly so index.html is at root.
+      # A curl retry loop waits until the server is actually ready.
+      # -----------------------------------------------------------------------
+      - name: Start Target Application
         run: |
-          echo "Simulating starting the test target app..."
-          # Start a Python HTTP server in the background as a dummy target
-          python -m http.server 8080 &
-          sleep 3
+          python -m http.server 8080 --directory app &
+          echo "Waiting for target app to be ready..."
+          curl --silent --fail --retry 10 --retry-delay 1 --retry-all-errors \
+            http://localhost:8080/ > /dev/null
+          echo "Target app is ready at http://localhost:8080"
 
+      # -----------------------------------------------------------------------
+      # Build the agent Docker image
+      # -----------------------------------------------------------------------
       - name: Build Agent Docker Image
         run: docker build -t ai-testing-agent .
 
+      # -----------------------------------------------------------------------
+      # Create a shared workspace directory for test artifacts (reports, scripts)
+      # -----------------------------------------------------------------------
+      - name: Prepare Workspace
+        run: mkdir -p $GITHUB_WORKSPACE/agent-workspace
+
+      # -----------------------------------------------------------------------
+      # Run the agent inside Docker.
+      # --network host  → lets the container reach localhost:8080
+      # -v workspace    → saves test_generated.py, report.html to the host
+      # WORKSPACE_DIR   → tells agent.py where to write artifacts
+      # GITHUB_TOKEN    → used by PyGithub to post PR comments
+      # GITHUB_REPOSITORY → "owner/repo" string, injected automatically
+      # -----------------------------------------------------------------------
       - name: Execute AI Testing Agent
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BODY: ${{ github.event.pull_request.body }}
-          TARGET_URL: "http://localhost:8080" # The local test app URL
+          TARGET_URL: "http://localhost:8080"
         run: |
           docker run --network host \
+            -v $GITHUB_WORKSPACE/agent-workspace:/workspace \
             -e GROQ_API_KEY=$GROQ_API_KEY \
+            -e GITHUB_TOKEN=$GITHUB_TOKEN \
+            -e GITHUB_REPOSITORY=$GITHUB_REPOSITORY \
+            -e WORKSPACE_DIR=/workspace \
             ai-testing-agent \
             $PR_NUMBER "$PR_BODY" "$TARGET_URL"
 
-      # Note: In a complete implementation, the agent.py would use PyGithub
-      # to post the execution logs back to the PR as a comment.
+      # -----------------------------------------------------------------------
+      # Upload the HTML test report as a downloadable GitHub Actions artifact
+      # so developers can view the full report from the Actions tab.
+      # -----------------------------------------------------------------------
+      - name: Upload Test Report
+        if: always() # always upload — even on failure, results are useful
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-test-report
+          path: ${{ github.workspace }}/agent-workspace/report.html
+          retention-days: 14
