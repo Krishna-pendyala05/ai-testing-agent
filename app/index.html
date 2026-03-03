@@ -46,8 +46,8 @@
           const email = document.getElementById("email").value;
           const card = document.getElementById("cardNumber").value;
 
-          // Simple validation
-          if (email && card) {
+          // Simple validation - BUG INTRODUCED (forgot to check if email was filled)
+          if (card) {
             document.getElementById("successMsg").style.display = "block";
             document.getElementById("errorMsg").style.display = "none";
           } else {
