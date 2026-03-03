@@ -14,3 +14,8 @@ __pycache__/
 # IDE files
 .vscode/
 .idea/
+
+# Node
+package.json
+execute-ai-testing-agent-github-action-logs.txt
+report.html
