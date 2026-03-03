@@ -76,6 +76,7 @@ def generate_tests(state: AgentState):
     5. Ensure the test uses headless mode.
     6. Set a very short timeout for page actions, e.g. `page.set_default_timeout(3000)` so tests fail fast if selectors are wrong.
     7. ABSOLUTELY DO NOT explicitly comment out test assertions or actions. Do not write "Since the provided HTML does not contain...". Write the actual test logic based ON THE HTML PROVIDED. If a field doesn't exist in the HTML, DO NOT test it. Only test the elements that are actually present.
+    8. VERY IMPORTANT: You MUST write a detailed Python docstring (`\"\"\"...\"\"\"`) for EVERY test function. The docstring must explain the specific intent of the test and what it verifies. These will be parsed for the final HTML report.
     """
     
     # If this is a retry attempt, feed the failure logs back into the LLM
@@ -111,8 +112,66 @@ def execute_tests(state: AgentState):
         f.write(code)
         
     print(f"\n--- GENERATED TEST CODE (Saved to {test_file_path}) ---\n{code}\n---------------------------\n")
+
+    # Inject pytest.ini to define metadata and project name
+    pytest_ini_path = os.path.join(workspace_dir, "pytest.ini")
+    with open(pytest_ini_path, "w") as f:
+        f.write(f"""[pytest]
+addopts = 
+    --html={os.path.join(workspace_dir, 'report.html')} 
+    --self-contained-html
+    --css={os.path.join(workspace_dir, 'custom.css')}
+    --tracing=retain-on-failure
+    --output={os.path.join(workspace_dir, 'test-results')}
+
+metadata =
+    Project AI Testing Agent
+    Target_URL {state.get('target_url', 'Unknown')}
+    PR_Description {state.get('pr_description', 'No description provided').replace(chr(10), ' ')}
+""")
+
+    # Inject custom CSS for a better UI report
+    custom_css_path = os.path.join(workspace_dir, "custom.css")
+    with open(custom_css_path, "w") as f:
+        f.write("""
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; color: #333; margin: 0; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .summary { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;}
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+        .results-table th { background-color: #34495e; color: white; padding: 12px; text-align: left; }
+        .results-table td { padding: 12px; border-bottom: 1px solid #ecf0f1; }
+        .passed { color: #27ae60; font-weight: bold; }
+        .failed { color: #e74c3c; font-weight: bold; }
+        .log { background: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; margin-top: 10px; }
+        """)
+
+    # Inject conftest.py to dynamically add extra Context links and Docstrings to the HTML report
+    conftest_path = os.path.join(workspace_dir, "conftest.py")
+    with open(conftest_path, "w") as f:
+        f.write("""
+import pytest
+from datetime import datetime
+
+def pytest_html_report_title(report):
+    report.title = "Autonomous AI Testing Report"
+
+def pytest_html_results_table_header(cells):
+    cells.insert(2, "<th>Description</th>")
+    cells.insert(1, '<th class="sortable time" data-column-type="time">Time</th>')
+
+def pytest_html_results_table_row(report, cells):
+    cells.insert(2, f"<td>{report.description}</td>")
+    cells.insert(1, f'<td class="col-time">{datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}</td>')
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    # Attach the python docstring to the report row for better explanation
+    report.description = str(item.function.__doc__) if item.function.__doc__ else 'N/A'
+""")
     
-    # Execute the test using pytest, generating an HTML report and Playwright traces
+    # Execute the test using pytest
     import subprocess
     result = subprocess.run(
         [
