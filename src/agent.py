@@ -25,7 +25,7 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
 
 # Initialize the LLM (using Groq's Llama 3 70B for strong reasoning)
-llm = ChatGroq(temperature=0, model_name="llama3-70b-8192", groq_api_key=api_key)
+llm = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", groq_api_key=api_key)
 
 # ---------------------------------------------------------
 # Node 1: Requirements Analyst
