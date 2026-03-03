@@ -1,7 +1,7 @@
 langchain-groq==0.1.9
 langgraph>=0.1.0
 pytest==8.2.1
-playwright>=1.48.0
+playwright>=1.58.0
 python-dotenv==1.0.1
 PyGithub==2.3.0
 pytest-html==4.1.1
