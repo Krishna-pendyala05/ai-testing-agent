@@ -163,13 +163,27 @@ def create_agent():
 
     return workflow.compile()
 
-# Example runner
+# Runner
 if __name__ == "__main__":
+    import sys
     app = create_agent()
     
+    # Read from sys.argv if provided (CI/CD mode)
+    if len(sys.argv) > 3:
+        pr_number = sys.argv[1]
+        pr_body = sys.argv[2]
+        target_url = sys.argv[3]
+        pr_description = f"PR #{pr_number}: {pr_body}"
+        print(f"Starting in CI/CD Mode targeting {target_url}")
+    else:
+        # Default fallback for local testing
+        pr_description = "Added a new 'Submit Order' button on the checkout page."
+        target_url = "https://example.com/checkout"
+        print("Starting in Local Dev Mode")
+        
     initial_state = {
-        "pr_description": "Added a new 'Submit Order' button on the checkout page.",
-        "target_url": "https://example.com/checkout",
+        "pr_description": pr_description,
+        "target_url": target_url,
         "retry_count": 0,
         "execution_status": "pending",
         "execution_logs": ""
