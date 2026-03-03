@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Target Application</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .success {
+        color: green;
+        display: none;
+        margin-top: 10px;
+      }
+      .error {
+        color: red;
+        display: none;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Checkout Page</h1>
+    <p>Please review your order and click submit.</p>
+
+    <div>
+      <label for="email">Email Address:</label><br />
+      <input type="email" id="email" required /><br /><br />
+
+      <label for="cardNumber">Card Number:</label><br />
+      <input type="text" id="cardNumber" required /><br /><br />
+
+      <!-- The button the PR mentioned -->
+      <button id="submitOrderBtn">Submit Order</button>
+    </div>
+
+    <div id="successMsg" class="success">Order processed successfully!</div>
+    <div id="errorMsg" class="error">Please fill out all fields.</div>
+
+    <script>
+      document
+        .getElementById("submitOrderBtn")
+        .addEventListener("click", function () {
+          const email = document.getElementById("email").value;
+          const card = document.getElementById("cardNumber").value;
+
+          // Simple validation
+          if (email && card) {
+            document.getElementById("successMsg").style.display = "block";
+            document.getElementById("errorMsg").style.display = "none";
+          } else {
+            document.getElementById("errorMsg").style.display = "block";
+            document.getElementById("successMsg").style.display = "none";
+          }
+        });
+    </script>
+  </body>
+</html>

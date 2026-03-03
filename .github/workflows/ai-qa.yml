@@ -1,0 +1,41 @@
+name: Autonomous AI Testing Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ai-qa:
+    runs-on: ubuntu-latest
+    name: Run AI QA Agent
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Here we would typically build or start the target application
+      # e.g.: docker-compose up -d test-app
+      - name: Start Target Application (Mock)
+        run: |
+          echo "Simulating starting the test target app..."
+          # Start a Python HTTP server in the background as a dummy target
+          python -m http.server 8080 &
+          sleep 3
+
+      - name: Build Agent Docker Image
+        run: docker build -t ai-testing-agent .
+
+      - name: Execute AI Testing Agent
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          TARGET_URL: "http://localhost:8080" # The local test app URL
+        run: |
+          docker run --network host \
+            -e GROQ_API_KEY=$GROQ_API_KEY \
+            ai-testing-agent \
+            $PR_NUMBER "$PR_BODY" "$TARGET_URL"
+
+      # Note: In a complete implementation, the agent.py would use PyGithub
+      # to post the execution logs back to the PR as a comment.
