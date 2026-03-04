@@ -29,9 +29,10 @@ from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
-# Local tool
+# Local tools
 sys.path.insert(0, os.path.dirname(__file__))
 from tools.page_inspector import inspect_page
+from tools.report_generator import generate_html_report
 
 # ---------------------------------------------------------------------------
 # Environment
@@ -175,7 +176,11 @@ def node_generate_tests(state: AgentState) -> dict:
         5. Use ONLY the element IDs and selectors found in the Live Application DOM above.
            DO NOT invent or guess any selector that is not listed there.
         6. For visibility checks, use Playwright's `page.locator("#id").is_visible()` (not `query_selector(...).is_visible()`).
-        7. Include a clear docstring in each test function.
+        7. Each test function MUST have a docstring in EXACTLY this format:
+           \"\"\"
+           INTENT: one sentence describing the behavior being verified.
+           EXPECTED: the specific outcome (element text, visibility, URL, etc.).
+           \"\"\"
         8. Set a default timeout of 5000ms on the page fixture.
     """).strip()
 
@@ -242,18 +247,6 @@ def node_generate_tests(state: AgentState) -> dict:
 # ---------------------------------------------------------------------------
 CONFTEST_CONTENT = textwrap.dedent("""
     import pytest
-    from datetime import datetime
-
-    def pytest_html_report_title(report):
-        report.title = \"Autonomous AI Testing Report\"
-
-    def pytest_html_results_table_header(cells):
-        cells.insert(2, \"<th>Description</th>\")
-        cells.insert(1, '<th class=\"sortable time\" data-column-type=\"time\">Time</th>')
-
-    def pytest_html_results_table_row(report, cells):
-        cells.insert(2, f\"<td>{report.description}</td>\")
-        cells.insert(1, f'<td class=\"col-time\">{datetime.utcnow().strftime(\"%Y-%m-%d %H:%M:%S\")}</td>')
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(item, call):
@@ -290,12 +283,7 @@ def node_execute_tests(state: AgentState) -> dict:
         f.write(CONFTEST_CONTENT)
 
     result = subprocess.run(
-        [
-            "pytest", test_file,
-            "-v", "--tb=short",
-            f"--html={report_file}",
-            "--self-contained-html",
-        ],
+        ["pytest", test_file, "-v", "--tb=short"],
         capture_output=True,
         text=True,
         cwd=workspace,
@@ -309,10 +297,23 @@ def node_execute_tests(state: AgentState) -> dict:
     if status == "failed":
         print("[Agent] Errors detected. Preparing to self-heal...")
 
+    # Generate custom modern HTML report
+    try:
+        generate_html_report(
+            logs=logs,
+            output_path=report_file,
+            test_code=code,
+            target_url=state.get("target_url", ""),
+            pr_number=state.get("pr_number", ""),
+            github_repo=GITHUB_REPOSITORY or "",
+        )
+    except Exception as rg_err:
+        print(f"[Agent] ⚠️  Report generation failed (non-fatal): {rg_err}")
+
     return {
         "execution_status": status,
         "execution_logs": logs,
-        "attempt_number": attempt + 1,  # increment AFTER execution for next attempt label
+        "attempt_number": attempt + 1,
     }
 
 
@@ -350,7 +351,22 @@ def node_report_results(state: AgentState) -> dict:
     passed = int(passed_match.group(1)) if passed_match else 0
     failed = int(failed_match.group(1)) if failed_match else 0
 
+    # Per-test results table for PR comment
+    test_rows = []
+    for m in re.finditer(
+        r'[\w./\\-]+\.py::(test_\w+)\s+(PASSED|FAILED|ERROR|SKIPPED)',
+        logs, re.MULTILINE
+    ):
+        icon = "✅" if m.group(2) == "PASSED" else "❌"
+        pretty = m.group(1).removeprefix("test_").replace("_", " ").title()
+        test_rows.append(f"| {pretty} | {icon} {m.group(2)} |")
+    tests_table = (
+        "| Test | Result |\n|---|---|\n" + "\n".join(test_rows)
+        if test_rows else "_No test results parsed._"
+    )
+
     badge = "✅ PASSED" if status == "success" else "❌ FAILED"
+    workspace = os.environ.get("WORKSPACE_DIR", "")
     comment_body = textwrap.dedent(f"""
         ## 🤖 Autonomous AI Testing Agent Report
 
@@ -362,6 +378,12 @@ def node_report_results(state: AgentState) -> dict:
         | Tests Passed | ✅ {passed} |
         | Tests Failed | {"❌ " + str(failed) if failed > 0 else "—"} |
         | Total Attempts | {total_attempts} |
+
+        ### 📊 Per-Test Results
+        {tests_table}
+
+        > 📄 A detailed HTML report has been saved to `artifact-generated-for-test-PR/`
+        > in this repository for full visual inspection.
 
         <details>
         <summary>📋 Full Test Logs (click to expand)</summary>
@@ -385,6 +407,7 @@ def node_report_results(state: AgentState) -> dict:
         print(f"\n[Agent] ✅ Posted test results comment to PR #{pr_num}")
     except Exception as e:
         print(f"\n[Agent] ⚠️  Could not post GitHub comment: {e}")
+        _print_summary(state)
         print("--- PR COMMENT BODY ---")
         print(comment_body)
         print("---")
