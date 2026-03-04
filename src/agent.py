@@ -182,6 +182,7 @@ def node_generate_tests(state: AgentState) -> dict:
            EXPECTED: the specific outcome (element text, visibility, URL, etc.).
            \"\"\"
         8. Set a default timeout of 5000ms on the page fixture.
+        9. CRITICAL QA RULE: If you are fixing a previously failing test, evaluate if the failure was due to bad test code (e.g. wrong selector) OR a genuine application bug. If the application is behaving incorrectly (e.g. valid promo code shows "Invalid", or discount is 0%), DO NOT change your assertion to match the broken behavior. Leave the test failing so the developer knows there is a bug.
     """).strip()
 
     # -----------------------------------------------------------------------
