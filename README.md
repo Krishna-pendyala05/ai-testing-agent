@@ -1,48 +1,55 @@
 # Autonomous AI Testing Agent 🤖
 
-An **AI-powered QA coworker** that integrates directly into your GitHub CI/CD pipeline. When a Pull Request is opened, this agent automatically:
+An **Autonomous AI Testing Agent** that integrates directly into your GitHub CI/CD pipeline to act as a tireless QA Engineer. When a Pull Request is opened, this agent automatically reads the proposed changes, inspects the live application, writes end-to-end tests, executes them in a sandboxed environment, and reports the results back to the PR.
 
-1. 🔍 **Inspects** the live target application's DOM to extract real element selectors
-2. 📋 **Reads** the PR description to understand the new features or changes
-3. ✍️ **Generates** Pytest/Playwright test scripts using real selectors (no guessing)
-4. ▶️ **Executes** the tests in a sandboxed headless browser environment
-5. 🔄 **Self-heals** if the test code fails, while strictly maintaining QA logic
-6. 📊 **Generates** a beautiful, self-contained Dark Theme HTML report
-7. 💬 **Posts** a detailed markdown summary table directly to the PR
+### 🌟 Core Value Proposition
 
-### 🌟 Why this stands out
+This agent bridges the gap between development and QA by ensuring every PR is automatically tested against real-world browser conditions _before_ merging.
 
-This agent doesn't just write tests—it acts as a **strict QA Engineer**. If a developer introduces a bug (e.g., a valid promo code incorrectly shows an "Invalid" message), the AI recognizes that the _application_ is broken, not the test. It refuses to weaken its assertions, intentionally failing the test to block the PR and alert the developer.
+Unlike traditional static tests, this agent:
+
+- **Validates Intent**: It reads the PR description to understand _why_ a change was made, not just _what_ code changed.
+- **Adapts to UI Changes**: It dynamically inspects the live DOM (via Playwright) to extract accurate element selectors, eliminating brittle test maintenance.
+- **Maintains Strict QA Standards**: It acts as an **oracle of truth**. If a developer introduces a logic bug (e.g., a valid promo code incorrectly shows an "Invalid" message), the AI recognizes that the _application_ is broken, not the test. It intentionally fails the test to block the PR, rather than weakening its assertions to achieve a passing grade.
+
+### 🎯 Key Use Cases
+
+- **Automated Regression Testing:** Catch UI and logic regressions on legacy applications without writing thousands of lines of brittle Selenium scripts.
+- **Rapid Prototyping QA:** Ensure MVP features work as intended immediately upon PR creation, without waiting for a manual QA cycle.
+- **Developer Productivity:** Free up engineers from writing boilerplate E2E tests for simple UI components, allowing them to focus on complex backend logic.
+- **CI/CD Quality Gates:** Strictly block faulty code from entering the `main` branch with autonomous, reliable pass/fail metrics.
 
 ---
 
-## Architecture
+## Architecture & Workflow
 
-```
-PR Opened → GitHub Actions
-               │
-       ┌───────▼────────┐
-       │  inspect_page  │ ← Playwright extracts live DOM
-       └───────┬────────┘
-       ┌───────▼────────────────┐
-       │  analyze_requirements  │ ← LLM reads PR + DOM
-       └───────┬────────────────┘
-       ┌───────▼────────┐
-       │ generate_tests │ ← LLM writes strict Pytest script
-       └───────┬────────┘
-       ┌───────▼────────┐
-       │ execute_tests  │ ← Pytest + Custom HTML Report Gen
-       └───────┬────────┘
-     pass? ◄───┘──► fail (API error) ? → self-heal (retries < 3)
-       │                 │
-       │                 fail (App logic error) ? → halt self-heal
-       └──────┬──────────┘
-       ┌──────▼───────┐
-       │report_results│ ← PyGithub posts PR comment + saves HTML Artifact
-       └──────────────┘
+The agent is built as a state machine using **LangGraph**, progressing through a strict 5-node pipeline for every PR.
+
+```mermaid
+graph TD
+    PR[PR Opened against target branch] --> GHA[GitHub Actions Triggered]
+
+    subgraph Autonomous Testing Agent
+    GHA --> N1[Node 1: inspect_page<br/><i>Playwright extracts live DOM</i>]
+    N1 --> N2[Node 2: analyze_requirements<br/><i>LLM reads PR & DOM limits</i>]
+    N2 --> N3[Node 3: generate_tests<br/><i>LLM writes strict Pytest script</i>]
+    N3 --> N4[Node 4: execute_tests<br/><i>Pytest runs in Docker sandbox</i>]
+
+    N4 -- Pass --> N5[Node 5: report_results<br/><i>Generate HTML & Post PR Comment</i>]
+    N4 -- API/Syntax Error --> N3
+    N4 -- App Logic Bug --> N5
+    end
 ```
 
-**Tech Stack:** Python · LangGraph (ReAct) · LangChain-Groq (Llama 3 70B & Ollama local fallback) · Playwright · Pytest · GitHub Actions CI/CD
+**Technology Stack:**
+
+- **Orchestration:** Python, LangGraph (ReAct State Machine)
+- **Primary LLM:** `Llama 3 70B` (via LangChain-Groq for ultra-fast, high-reasoning inference)
+- **Fallback LLM:** `Ollama` (local open-source fallback for high-availability)
+- **Browser Automation:** Playwright
+- **Testing Framework:** Pytest
+- **Infrastructure:** Docker, GitHub Actions CI/CD
+- **Integration:** PyGithub (Automated PR commenting and Artifact Commit)
 
 ---
 
