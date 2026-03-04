@@ -2,41 +2,47 @@
 
 An **AI-powered QA coworker** that integrates directly into your GitHub CI/CD pipeline. When a Pull Request is opened, this agent automatically:
 
-1. 🔍 **Inspects** the live target application's DOM to find real element selectors
-2. 📋 **Reads** the PR description to understand what changed
-3. ✍️ **Generates** Playwright/Pytest test scripts using actual selectors (no guessing)
-4. ▶️ **Executes** the tests in a Docker sandbox
-5. 🔄 **Self-heals** if the scripts error (up to 3 retries, without weakening assertions)
-6. 💬 **Posts** a formatted test results comment directly on the PR
+1. 🔍 **Inspects** the live target application's DOM to extract real element selectors
+2. 📋 **Reads** the PR description to understand the new features or changes
+3. ✍️ **Generates** Pytest/Playwright test scripts using real selectors (no guessing)
+4. ▶️ **Executes** the tests in a sandboxed headless browser environment
+5. 🔄 **Self-heals** if the test code fails, while strictly maintaining QA logic
+6. 📊 **Generates** a beautiful, self-contained Dark Theme HTML report
+7. 💬 **Posts** a detailed markdown summary table directly to the PR
+
+### 🌟 Why this stands out
+
+This agent doesn't just write tests—it acts as a **strict QA Engineer**. If a developer introduces a bug (e.g., a valid promo code incorrectly shows an "Invalid" message), the AI recognizes that the _application_ is broken, not the test. It refuses to weaken its assertions, intentionally failing the test to block the PR and alert the developer.
 
 ---
 
 ## Architecture
 
 ```
-PR Opened → GitHub Actions → Docker Container
-                                    │
-                            ┌───────▼────────┐
-                            │  inspect_page  │ ← Playwright scrapes live DOM
-                            └───────┬────────┘
-                            ┌───────▼────────────────┐
-                            │  analyze_requirements  │ ← LLM reads PR + DOM
-                            └───────┬────────────────┘
-                            ┌───────▼────────┐
-                            │ generate_tests │ ← LLM writes Pytest script
-                            └───────┬────────┘
-                            ┌───────▼────────┐
-                            │ execute_tests  │ ← Pytest + Playwright runs
-                            └───────┬────────┘
-                          pass? ◄───┘──► fail & retries < 3?
-                            │                     │
-                            └──────┬──────────────┘
-                            ┌──────▼───────┐
-                            │report_results│ ← PyGithub posts PR comment
-                            └──────────────┘
+PR Opened → GitHub Actions
+               │
+       ┌───────▼────────┐
+       │  inspect_page  │ ← Playwright extracts live DOM
+       └───────┬────────┘
+       ┌───────▼────────────────┐
+       │  analyze_requirements  │ ← LLM reads PR + DOM
+       └───────┬────────────────┘
+       ┌───────▼────────┐
+       │ generate_tests │ ← LLM writes strict Pytest script
+       └───────┬────────┘
+       ┌───────▼────────┐
+       │ execute_tests  │ ← Pytest + Custom HTML Report Gen
+       └───────┬────────┘
+     pass? ◄───┘──► fail (API error) ? → self-heal (retries < 3)
+       │                 │
+       │                 fail (App logic error) ? → halt self-heal
+       └──────┬──────────┘
+       ┌──────▼───────┐
+       │report_results│ ← PyGithub posts PR comment + saves HTML Artifact
+       └──────────────┘
 ```
 
-**Tech Stack:** Python · LangGraph (ReAct) · LangChain-Groq (Llama 3 70B) · Playwright · Pytest · Docker · GitHub Actions · PyGithub
+**Tech Stack:** Python · LangGraph (ReAct) · LangChain-Groq (Llama 3 70B & Ollama local fallback) · Playwright · Pytest · GitHub Actions CI/CD
 
 ---
 
@@ -114,25 +120,37 @@ Go to your repo → **Settings → Secrets and variables → Actions → New rep
 
 ### 2. The workflow triggers automatically
 
-Every time a PR is opened or updated, the `ai-qa` job runs and posts a comment like:
-
----
+Every time a PR is opened or updated, the `ai-qa` job runs and posts a detailed PR comment:
 
 > **🤖 Autonomous AI Testing Agent Report**
 >
-> **Status: ✅ PASSED** | Attempts: 1
+> **PR #4** | **Status: ❌ FAILED** | **Attempts: 1**
 >
 > | Metric       | Value                   |
 > | ------------ | ----------------------- |
 > | Target URL   | `http://localhost:8080` |
-> | Tests Passed | ✅ 5                    |
-> | Tests Failed | —                       |
+> | Tests Passed | ✅ 2                    |
+> | Tests Failed | ❌ 4                    |
+>
+> ### 📊 Per-Test Results
+>
+> | Test                             | Result    |
+> | -------------------------------- | --------- |
+> | Valid Promo Code Entry           | ❌ FAILED |
+> | Multiple Promo Code Applications | ✅ PASSED |
 
----
+### 3. Beautiful HTML Reports Auto-Saved
 
-### 3. View the HTML Report
+After each run, a custom-built, dependency-free Python HTML generator creates a stunning dark-theme report.
+The GitHub Action automatically **commits this report directly to your branch** (e.g., `artifact-generated-for-test-PR/report-pr-4.html`) and uploads it as an artifact.
 
-After each run, the full test report is uploaded as a GitHub Actions artifact named **`ai-test-report`** and retained for 14 days.
+**Report Features:**
+
+- Overall Pass/Fail metrics and duration
+- A visual progress bar
+- Expandable cards for each test showing:
+  - **Intent**: The exact PR requirement the test is validating
+  - **Failure Trace**: Clean, color-coded assertion logs if the test failed
 
 ---
 
@@ -165,12 +183,12 @@ ai-testing-agent/
 
 The agent distinguishes between two types of failures:
 
-| Failure Type                                                    | Agent Action                                                    |
-| --------------------------------------------------------------- | --------------------------------------------------------------- |
-| **Python/API Error** (e.g. wrong method name, `AttributeError`) | Fixes the code, keeps all assertions                            |
-| **Assertion Failure** (test ran, app behavior wrong)            | Keeps the assertion — marks the **app** as broken, NOT the test |
+| Failure Type                                                  | Agent Action                                                |
+| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Python/API Error** (e.g. wrong Playwright syntax, timeout)  | Rewrites the code based on the error trace, preserves goals |
+| **Assertion Failure** (App behaves differently than expected) | Retains the strict assertion — exposes the application bug  |
 
-This means the agent will never "cheat" by lowering expectations to make tests pass. If the application has a real bug, the agent will report a failure.
+By providing strict LLM Prompts, the agent acts as an **oracle of truth**. If a developer introduces a backwards logic bug (e.g., applying a promo code saves $0), the AI will generate a test expecting $10. When the test fails, instead of making the test look for $0 to pass, it strictly halts and reports the failure to the PR.
 
 ---
 
