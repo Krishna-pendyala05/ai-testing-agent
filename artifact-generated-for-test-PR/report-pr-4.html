@@ -35,7 +35,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);
 .prog-bar{height:8px;background:var(--sf2);border-radius:99px;overflow:hidden}
 .prog-fill{height:100%;border-radius:99px;
   background:linear-gradient(90deg,var(--pa),#34d399);
-  width:14%;transition:width .5s ease}
+  width:0%;transition:width .5s ease}
 /* Stats */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:14px;margin:24px 48px 0}
@@ -90,32 +90,32 @@ footer a{color:var(--ac);text-decoration:none}
 <div class="hero">
   <div class="eyebrow">Autonomous AI Testing Agent</div>
   <h1>Test Execution Report</h1>
-  <p>Generated 2026-03-04 13:14:31 UTC</p>
+  <p>Generated 2026-03-04 13:35:53 UTC</p>
   <div class="pills"><div class="pill">🔗 PR <b>#4</b></div>
 <div class="pill">🌐 <b>http://localhost:8080</b></div>
-<div class="pill">⏱ <b>1.02s</b></div>
-<div class="pill">🧪 <b>7 tests</b></div></div>
+<div class="pill">⏱ <b>1.67s</b></div>
+<div class="pill">🧪 <b>6 tests</b></div></div>
 </div>
 
 <div class="status">
   <div class="si">❌</div>
   <div>
     <div class="st">6 TEST(S) FAILED</div>
-    <div class="ss">1 passed &middot; 6 failed
-      &middot; 7 total &middot; 1.02s</div>
+    <div class="ss">0 passed &middot; 6 failed
+      &middot; 6 total &middot; 1.67s</div>
   </div>
 </div>
 
 <div class="prog-wrap">
-  <div class="prog-label">Pass rate: 14%</div>
+  <div class="prog-label">Pass rate: 0%</div>
   <div class="prog-bar"><div class="prog-fill"></div></div>
 </div>
 
 <div class="stats">
-  <div class="sc"><div class="lbl">Passed</div><div class="val green">1</div></div>
+  <div class="sc"><div class="lbl">Passed</div><div class="val green">0</div></div>
   <div class="sc"><div class="lbl">Failed</div><div class="val red">6</div></div>
-  <div class="sc"><div class="lbl">Total</div><div class="val purple">7</div></div>
-  <div class="sc"><div class="lbl">Duration</div><div class="val white">1.02s</div></div>
+  <div class="sc"><div class="lbl">Total</div><div class="val purple">6</div></div>
+  <div class="sc"><div class="lbl">Duration</div><div class="val white">1.67s</div></div>
 </div>
 
 <div class="section">
@@ -128,15 +128,10 @@ footer a{color:var(--ac);text-decoration:none}
               <div class="cn">Valid Promo Code Entry</div>
               <div class="cid">test_valid_promo_code_entry</div>
             </div>
-            <span class="badge badge-fail">FAILED</span>
+            <span class="badge badge-fail">ERROR</span>
           </div>
           <div class="intent"><p><b>Intent:</b> Verify that a valid promo code is applied successfully.
-    <br><b>Expected:</b> The #promoResult div displays a valid indicator, and the #discountDisplay div shows the corresponding discount percentage.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:22: in test_valid_promo_code_entry
-    assert page.locator("#promoResult").text_content() == "Promo code applied successfully"
-E   AssertionError: assert 'Invalid promo code!' == 'Promo code a... successfully'
-E     
-E     - Promo code applied successfully
-E     + Invalid promo code!</pre></div>
+    <br><b>Expected:</b> The promo result displays "Promo code applied successfully" and the discount display shows the corresponding discount percentage.</p></div>
         </div>
 
         <div class="card card-fail">
@@ -146,15 +141,10 @@ E     + Invalid promo code!</pre></div>
               <div class="cn">Invalid Promo Code Entry</div>
               <div class="cid">test_invalid_promo_code_entry</div>
             </div>
-            <span class="badge badge-fail">FAILED</span>
+            <span class="badge badge-fail">ERROR</span>
           </div>
           <div class="intent"><p><b>Intent:</b> Verify that an invalid promo code is not applied.
-    <br><b>Expected:</b> The #promoResult div displays an invalid indicator, and the #discountDisplay div remains empty or unchanged.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:32: in test_invalid_promo_code_entry
-    assert page.locator("#promoResult").text_content() == "Invalid promo code"
-E   AssertionError: assert 'Promo code a... You save 0%.' == 'Invalid promo code'
-E     
-E     - Invalid promo code
-E     + Promo code applied! You save 0%.</pre></div>
+    <br><b>Expected:</b> The promo result displays "Invalid promo code" and the discount display remains empty or unchanged.</p></div>
         </div>
 
         <div class="card card-fail">
@@ -164,15 +154,10 @@ E     + Promo code applied! You save 0%.</pre></div>
               <div class="cn">Empty Promo Code Entry</div>
               <div class="cid">test_empty_promo_code_entry</div>
             </div>
-            <span class="badge badge-fail">FAILED</span>
+            <span class="badge badge-fail">ERROR</span>
           </div>
           <div class="intent"><p><b>Intent:</b> Verify that an empty promo code field is handled correctly.
-    <br><b>Expected:</b> The #promoResult div displays an error or warning message, and the #discountDisplay div remains empty or unchanged.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:41: in test_empty_promo_code_entry
-    assert page.locator("#promoResult").text_content() == "Please enter a promo code"
-E   AssertionError: assert 'Promo code a... You save 0%.' == 'Please enter a promo code'
-E     
-E     - Please enter a promo code
-E     + Promo code applied! You save 0%.</pre></div>
+    <br><b>Expected:</b> The promo result displays an error or warning message and the discount display remains empty or unchanged.</p></div>
         </div>
 
         <div class="card card-fail">
@@ -182,53 +167,36 @@ E     + Promo code applied! You save 0%.</pre></div>
               <div class="cn">Promo Code Entry With Leading Trailing Whitespace</div>
               <div class="cid">test_promo_code_entry_with_leading_trailing_whitespace</div>
             </div>
-            <span class="badge badge-fail">FAILED</span>
+            <span class="badge badge-fail">ERROR</span>
           </div>
           <div class="intent"><p><b>Intent:</b> Verify that a valid promo code with leading or trailing whitespace is applied successfully.
-    <br><b>Expected:</b> The #promoResult div displays a valid indicator, and the #discountDisplay div shows the corresponding discount percentage.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:51: in test_promo_code_entry_with_leading_trailing_whitespace
-    assert page.locator("#promoResult").text_content() == "Promo code applied successfully"
-E   AssertionError: assert 'Invalid promo code!' == 'Promo code a... successfully'
-E     
-E     - Promo code applied successfully
-E     + Invalid promo code!</pre></div>
+    <br><b>Expected:</b> The promo result displays "Promo code applied successfully" and the discount display shows the corresponding discount percentage.</p></div>
         </div>
 
         <div class="card card-fail">
           <div class="card-hdr">
             <div class="ci badge-fail">✗</div>
             <div style="flex:1;min-width:0">
-              <div class="cn">Multiple Promo Code Applications</div>
-              <div class="cid">test_multiple_promo_code_applications</div>
+              <div class="cn">Multiple Promo Code Entries</div>
+              <div class="cid">test_multiple_promo_code_entries</div>
             </div>
-            <span class="badge badge-fail">FAILED</span>
+            <span class="badge badge-fail">ERROR</span>
           </div>
-          <div class="intent"><p><b>Intent:</b> Verify that multiple promo code applications are handled correctly.
-    <br><b>Expected:</b> The #promoResult div displays an error or warning message, and the #discountDisplay div remains unchanged or updates to reflect the new promo code.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:63: in test_multiple_promo_code_applications
-    assert page.locator("#promoResult").text_content() == "Only one promo code can be applied"
-E   AssertionError: assert 'Promo code a... You save 0%.' == 'Only one pro...an be applied'
-E     
-E     - Only one promo code can be applied
-E     + Promo code applied! You save 0%.</pre></div>
+          <div class="intent"><p><b>Intent:</b> Verify that multiple promo code entries are handled correctly.
+    <br><b>Expected:</b> The promo result updates to reflect the new promo code and the discount display shows the corresponding discount percentage for the new promo code.</p></div>
         </div>
 
         <div class="card card-fail">
           <div class="card-hdr">
             <div class="ci badge-fail">✗</div>
             <div style="flex:1;min-width:0">
-              <div class="cn">Promo Code Application With Incomplete Form</div>
-              <div class="cid">test_promo_code_application_with_incomplete_form</div>
+              <div class="cn">Promo Code Entry With Submit Order</div>
+              <div class="cid">test_promo_code_entry_with_submit_order</div>
             </div>
-            <span class="badge badge-fail">FAILED</span>
+            <span class="badge badge-fail">ERROR</span>
           </div>
-          <div class="intent"><p><b>Intent:</b> Verify that a promo code application with an incomplete form is handled correctly.
-    <br><b>Expected:</b> The #errorMsg div displays an error message, and the #promoResult div remains unchanged or displays an error message.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:73: in test_promo_code_application_with_incomplete_form
-    assert page.locator("#errorMsg").text_content() == "Please fill out all fields"
-E   AssertionError: assert 'Please fill out all fields.' == 'Please fill out all fields'
-E     
-E     - Please fill out all fields
-E     + Please fill out all fields.
-E     ?                           +
-===========================</pre></div>
+          <div class="intent"><p><b>Intent:</b> Verify that a valid promo code is applied and the order is submitted successfully.
+    <br><b>Expected:</b> The success message is displayed and the discount is applied to the order total.</p></div>
         </div>
 </div>
 
