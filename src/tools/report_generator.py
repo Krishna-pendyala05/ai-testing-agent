@@ -17,10 +17,10 @@ def _parse_tests(logs: str) -> list:
     """Return list of {name, result, failure_log} from verbose pytest output."""
     tests = []
     for m in re.finditer(
-        r'[\w./\\-]+\.py::(test_\w+)\s+(PASSED|FAILED|ERROR|SKIPPED)',
+        r'^(PASSED|FAILED|ERROR|SKIPPED)\s+[\w./\\-]+\.py::(test_\w+)',
         logs, re.MULTILINE
     ):
-        tests.append({"name": m.group(1), "result": m.group(2), "failure_log": ""})
+        tests.append({"name": m.group(2), "result": m.group(1), "failure_log": ""})
 
     # Attach failure blocks
     trimmed = logs.split("short test summary info")[0]
@@ -38,7 +38,11 @@ def _parse_docstrings(code: str) -> dict:
     for m in re.finditer(
         r'def (test_\w+)\s*\([^)]*\)\s*:\s*"""(.*?)"""', code, re.DOTALL
     ):
-        docs[m.group(1)] = m.group(2).strip()
+        doc = m.group(2).strip()
+        # Clean up INTENT/EXPECTED formatting if present
+        doc = re.sub(r'INTENT:\s*', '<b>Intent:</b> ', doc, flags=re.IGNORECASE)
+        doc = re.sub(r'EXPECTED:\s*', '<br><b>Expected:</b> ', doc, flags=re.IGNORECASE)
+        docs[m.group(1)] = doc
     return docs
 
 
@@ -46,7 +50,10 @@ def _summary(logs: str) -> dict:
     passed = int(m.group(1)) if (m := re.search(r'(\d+) passed', logs)) else 0
     failed = int(m.group(1)) if (m := re.search(r'(\d+) failed', logs)) else 0
     errors = int(m.group(1)) if (m := re.search(r'(\d+) error',  logs)) else 0
-    dur    = m.group(1) if (m := re.search(r'in (\d+\.?\d*)s', logs)) else "N/A"
+    
+    dur_match = re.search(r'in (\d+\.?\d*)s', logs)
+    dur = dur_match.group(1) if dur_match else "N/A"
+    
     return {"passed": passed, "failed": failed + errors,
             "total": passed + failed + errors, "duration": dur}
 
@@ -96,7 +103,7 @@ def generate_html_report(
         icon = "✓" if ip else "✗"
 
         doc_html = (
-            f'<div class="intent"><b>📋 Intent</b><p>{_esc(t["doc"])}</p></div>'
+            f'<div class="intent"><p>{t["doc"]}</p></div>'
             if t["doc"] else ""
         )
         fail_html = (

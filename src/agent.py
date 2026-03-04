@@ -354,16 +354,18 @@ def node_report_results(state: AgentState) -> dict:
     # Per-test results table for PR comment
     test_rows = []
     for m in re.finditer(
-        r'[\w./\\-]+\.py::(test_\w+)\s+(PASSED|FAILED|ERROR|SKIPPED)',
+        r'^(PASSED|FAILED|ERROR|SKIPPED)\s+[\w./\\-]+\.py::(test_\w+)',
         logs, re.MULTILINE
     ):
-        icon = "✅" if m.group(2) == "PASSED" else "❌"
-        pretty = m.group(1).removeprefix("test_").replace("_", " ").title()
-        test_rows.append(f"| {pretty} | {icon} {m.group(2)} |")
-    tests_table = (
-        "| Test | Result |\n|---|---|\n" + "\n".join(test_rows)
-        if test_rows else "_No test results parsed._"
-    )
+        icon = "✅" if m.group(1) == "PASSED" else "❌"
+        pretty = m.group(2).removeprefix("test_").replace("_", " ").title()
+        test_rows.append(f"| {pretty} | {icon} {m.group(1)} |")
+    
+    # Check if we successfully parsed the tests table
+    if test_rows:
+        tests_table = "| Test | Result |\n|---|---|\n" + "\n".join(test_rows)
+    else:
+        tests_table = "_No test results parsed._"
 
     badge = "✅ PASSED" if status == "success" else "❌ FAILED"
     workspace = os.environ.get("WORKSPACE_DIR", "")
@@ -380,6 +382,7 @@ def node_report_results(state: AgentState) -> dict:
         | Total Attempts | {total_attempts} |
 
         ### 📊 Per-Test Results
+
         {tests_table}
 
         > 📄 A detailed HTML report has been saved to `artifact-generated-for-test-PR/`
