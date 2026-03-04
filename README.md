@@ -27,17 +27,23 @@ The agent is built as a state machine using **LangGraph**, progressing through a
 
 ```mermaid
 graph TD
-    PR[PR Opened against target branch] --> GHA[GitHub Actions Triggered]
+    classDef trigger fill:#2563eb,stroke:#1d4ed8,stroke-width:2px,color:#fff
+    classDef extract fill:#059669,stroke:#047857,stroke-width:2px,color:#fff
+    classDef llm fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#fff
+    classDef exec fill:#be123c,stroke:#9f1239,stroke-width:2px,color:#fff
+    classDef report fill:#ea580c,stroke:#c2410c,stroke-width:2px,color:#fff
 
-    subgraph Autonomous Testing Agent
-    GHA --> N1[Node 1: inspect_page<br/><i>Playwright extracts live DOM</i>]
-    N1 --> N2[Node 2: analyze_requirements<br/><i>LLM reads PR & DOM limits</i>]
-    N2 --> N3[Node 3: generate_tests<br/><i>LLM writes strict Pytest script</i>]
-    N3 --> N4[Node 4: execute_tests<br/><i>Pytest runs in Docker sandbox</i>]
+    PR[PR Opened against target branch]:::trigger --> GHA[GitHub Actions Triggered]:::trigger
 
-    N4 -- Pass --> N5[Node 5: report_results<br/><i>Generate HTML & Post PR Comment</i>]
-    N4 -- API/Syntax Error --> N3
-    N4 -- App Logic Bug --> N5
+    subgraph Agent [Autonomous Testing Agent]
+        GHA --> N1[Node 1: inspect_page<br/><i>Playwright extracts live DOM</i>]:::extract
+        N1 --> N2[Node 2: analyze_requirements<br/><i>LLM reads PR & DOM limits</i>]:::llm
+        N2 --> N3[Node 3: generate_tests<br/><i>LLM writes strict Pytest script</i>]:::llm
+        N3 --> N4[Node 4: execute_tests<br/><i>Pytest runs in Docker sandbox</i>]:::exec
+
+        N4 -- Pass --> N5[Node 5: report_results<br/><i>Generate HTML & Post PR Comment</i>]:::report
+        N4 -- API/Syntax Error --> N3
+        N4 -- App Logic Bug --> N5
     end
 ```
 
