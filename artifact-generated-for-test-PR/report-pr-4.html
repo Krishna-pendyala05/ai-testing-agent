@@ -90,10 +90,10 @@ footer a{color:var(--ac);text-decoration:none}
 <div class="hero">
   <div class="eyebrow">Autonomous AI Testing Agent</div>
   <h1>Test Execution Report</h1>
-  <p>Generated 2026-03-04 13:35:53 UTC</p>
+  <p>Generated 2026-03-04 13:46:40 UTC</p>
   <div class="pills"><div class="pill">🔗 PR <b>#4</b></div>
 <div class="pill">🌐 <b>http://localhost:8080</b></div>
-<div class="pill">⏱ <b>1.67s</b></div>
+<div class="pill">⏱ <b>3.93s</b></div>
 <div class="pill">🧪 <b>6 tests</b></div></div>
 </div>
 
@@ -102,7 +102,7 @@ footer a{color:var(--ac);text-decoration:none}
   <div>
     <div class="st">6 TEST(S) FAILED</div>
     <div class="ss">0 passed &middot; 6 failed
-      &middot; 6 total &middot; 1.67s</div>
+      &middot; 6 total &middot; 3.93s</div>
   </div>
 </div>
 
@@ -115,7 +115,7 @@ footer a{color:var(--ac);text-decoration:none}
   <div class="sc"><div class="lbl">Passed</div><div class="val green">0</div></div>
   <div class="sc"><div class="lbl">Failed</div><div class="val red">6</div></div>
   <div class="sc"><div class="lbl">Total</div><div class="val purple">6</div></div>
-  <div class="sc"><div class="lbl">Duration</div><div class="val white">1.67s</div></div>
+  <div class="sc"><div class="lbl">Duration</div><div class="val white">3.93s</div></div>
 </div>
 
 <div class="section">
@@ -128,10 +128,15 @@ footer a{color:var(--ac);text-decoration:none}
               <div class="cn">Valid Promo Code Entry</div>
               <div class="cid">test_valid_promo_code_entry</div>
             </div>
-            <span class="badge badge-fail">ERROR</span>
+            <span class="badge badge-fail">FAILED</span>
           </div>
           <div class="intent"><p><b>Intent:</b> Verify that a valid promo code is applied successfully.
-    <br><b>Expected:</b> The promo result displays "Promo code applied successfully" and the discount display shows the corresponding discount percentage.</p></div>
+    <br><b>Expected:</b> The promo result displays "Promo code applied successfully" and the discount display shows the corresponding discount percentage.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:22: in test_valid_promo_code_entry
+    assert page.locator("#promoResult").text_content() == "Promo code applied successfully"
+E   AssertionError: assert 'Invalid promo code!' == 'Promo code a... successfully'
+E     
+E     - Promo code applied successfully
+E     + Invalid promo code!</pre></div>
         </div>
 
         <div class="card card-fail">
@@ -141,10 +146,15 @@ footer a{color:var(--ac);text-decoration:none}
               <div class="cn">Invalid Promo Code Entry</div>
               <div class="cid">test_invalid_promo_code_entry</div>
             </div>
-            <span class="badge badge-fail">ERROR</span>
+            <span class="badge badge-fail">FAILED</span>
           </div>
-          <div class="intent"><p><b>Intent:</b> Verify that an invalid promo code is not applied.
-    <br><b>Expected:</b> The promo result displays "Invalid promo code" and the discount display remains empty or unchanged.</p></div>
+          <div class="intent"><p><b>Intent:</b> Verify that an invalid promo code is handled correctly.
+    <br><b>Expected:</b> The promo result displays "Invalid promo code" and the discount display remains empty or unchanged.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:32: in test_invalid_promo_code_entry
+    assert page.locator("#promoResult").text_content() == "Invalid promo code"
+E   AssertionError: assert 'Promo code a... You save 0%.' == 'Invalid promo code'
+E     
+E     - Invalid promo code
+E     + Promo code applied! You save 0%.</pre></div>
         </div>
 
         <div class="card card-fail">
@@ -154,36 +164,15 @@ footer a{color:var(--ac);text-decoration:none}
               <div class="cn">Empty Promo Code Entry</div>
               <div class="cid">test_empty_promo_code_entry</div>
             </div>
-            <span class="badge badge-fail">ERROR</span>
+            <span class="badge badge-fail">FAILED</span>
           </div>
-          <div class="intent"><p><b>Intent:</b> Verify that an empty promo code field is handled correctly.
-    <br><b>Expected:</b> The promo result displays an error or warning message and the discount display remains empty or unchanged.</p></div>
-        </div>
-
-        <div class="card card-fail">
-          <div class="card-hdr">
-            <div class="ci badge-fail">✗</div>
-            <div style="flex:1;min-width:0">
-              <div class="cn">Promo Code Entry With Leading Trailing Whitespace</div>
-              <div class="cid">test_promo_code_entry_with_leading_trailing_whitespace</div>
-            </div>
-            <span class="badge badge-fail">ERROR</span>
-          </div>
-          <div class="intent"><p><b>Intent:</b> Verify that a valid promo code with leading or trailing whitespace is applied successfully.
-    <br><b>Expected:</b> The promo result displays "Promo code applied successfully" and the discount display shows the corresponding discount percentage.</p></div>
-        </div>
-
-        <div class="card card-fail">
-          <div class="card-hdr">
-            <div class="ci badge-fail">✗</div>
-            <div style="flex:1;min-width:0">
-              <div class="cn">Multiple Promo Code Entries</div>
-              <div class="cid">test_multiple_promo_code_entries</div>
-            </div>
-            <span class="badge badge-fail">ERROR</span>
-          </div>
-          <div class="intent"><p><b>Intent:</b> Verify that multiple promo code entries are handled correctly.
-    <br><b>Expected:</b> The promo result updates to reflect the new promo code and the discount display shows the corresponding discount percentage for the new promo code.</p></div>
+          <div class="intent"><p><b>Intent:</b> Verify that an empty promo code is handled correctly.
+    <br><b>Expected:</b> The promo result displays "Please enter a promo code" and the discount display remains empty or unchanged.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:41: in test_empty_promo_code_entry
+    assert page.locator("#promoResult").text_content() == "Please enter a promo code"
+E   AssertionError: assert 'Promo code a... You save 0%.' == 'Please enter a promo code'
+E     
+E     - Please enter a promo code
+E     + Promo code applied! You save 0%.</pre></div>
         </div>
 
         <div class="card card-fail">
@@ -193,10 +182,53 @@ footer a{color:var(--ac);text-decoration:none}
               <div class="cn">Promo Code Entry With Submit Order</div>
               <div class="cid">test_promo_code_entry_with_submit_order</div>
             </div>
-            <span class="badge badge-fail">ERROR</span>
+            <span class="badge badge-fail">FAILED</span>
           </div>
-          <div class="intent"><p><b>Intent:</b> Verify that a valid promo code is applied and the order is submitted successfully.
-    <br><b>Expected:</b> The success message is displayed and the discount is applied to the order total.</p></div>
+          <div class="intent"><p><b>Intent:</b> Verify that a valid promo code is applied successfully and the order is submitted.
+    <br><b>Expected:</b> The order is processed successfully and the success message is displayed.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:52: in test_promo_code_entry_with_submit_order
+    assert page.locator("#successMsg").is_visible()
+E   AssertionError: assert False
+E    +  where False = &lt;bound method Locator.is_visible of &lt;Locator frame=&lt;Frame name= url='http://localhost:8080/'&gt; selector='#successMsg'&gt;&gt;()
+E    +    where &lt;bound method Locator.is_visible of &lt;Locator frame=&lt;Frame name= url='http://localhost:8080/'&gt; selector='#successMsg'&gt;&gt; = &lt;Locator frame=&lt;Frame name= url='http://localhost:8080/'&gt; selector='#successMsg'&gt;.is_visible
+E    +      where &lt;Locator frame=&lt;Frame name= url='http://localhost:8080/'&gt; selector='#successMsg'&gt; = &lt;bound method Page.locator of &lt;Page url='http://localhost:8080/'&gt;&gt;('#successMsg')
+E    +        where &lt;bound method Page.locator of &lt;Page url='http://localhost:8080/'&gt;&gt; = &lt;Page url='http://localhost:8080/'&gt;.locator</pre></div>
+        </div>
+
+        <div class="card card-fail">
+          <div class="card-hdr">
+            <div class="ci badge-fail">✗</div>
+            <div style="flex:1;min-width:0">
+              <div class="cn">Multiple Promo Code Entries</div>
+              <div class="cid">test_multiple_promo_code_entries</div>
+            </div>
+            <span class="badge badge-fail">FAILED</span>
+          </div>
+          <div class="intent"><p><b>Intent:</b> Verify that multiple promo code entries are handled correctly.
+    <br><b>Expected:</b> The promo result updates to reflect the new promo code and the discount display shows the corresponding discount percentage.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:63: in test_multiple_promo_code_entries
+    assert page.locator("#promoResult").text_content() == "Promo code applied successfully"
+E   AssertionError: assert 'Promo code a... You save 0%.' == 'Promo code a... successfully'
+E     
+E     - Promo code applied successfully
+E     + Promo code applied! You save 0%.</pre></div>
+        </div>
+
+        <div class="card card-fail">
+          <div class="card-hdr">
+            <div class="ci badge-fail">✗</div>
+            <div style="flex:1;min-width:0">
+              <div class="cn">Promo Code Entry With No Discount</div>
+              <div class="cid">test_promo_code_entry_with_no_discount</div>
+            </div>
+            <span class="badge badge-fail">FAILED</span>
+          </div>
+          <div class="intent"><p><b>Intent:</b> Verify that a promo code with no discount is handled correctly.
+    <br><b>Expected:</b> The promo result displays "No discount available for this promo code" and the discount display remains empty or unchanged.</p></div><div class="failure"><b>🔴 Failure Detail</b><pre>test_generated.py:73: in test_promo_code_entry_with_no_discount
+    assert page.locator("#promoResult").text_content() == "No discount available for this promo code"
+E   AssertionError: assert 'Invalid promo code!' == 'No discount ...is promo code'
+E     
+E     - No discount available for this promo code
+E     + Invalid promo code!
+===========================</pre></div>
         </div>
 </div>
 
