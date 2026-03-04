@@ -19,6 +19,16 @@
         display: none;
         margin-top: 10px;
       }
+      #promoResult {
+        margin-top: 8px;
+        font-weight: bold;
+        display: none;
+      }
+      #discountDisplay {
+        color: green;
+        display: none;
+        margin-top: 6px;
+      }
     </style>
   </head>
   <body>
@@ -32,6 +42,14 @@
       <label for="cardNumber">Card Number:</label><br />
       <input type="text" id="cardNumber" required /><br /><br />
 
+      <!-- Promo Code section (new feature) -->
+      <label for="promoCode">Promo Code (optional):</label><br />
+      <input type="text" id="promoCode" placeholder="e.g. SAVE10" />&nbsp;
+      <button id="applyPromoBtn" type="button">Apply</button><br />
+      <div id="promoResult"></div>
+      <div id="discountDisplay"></div>
+      <br />
+
       <!-- The button the PR mentioned -->
       <button id="submitOrderBtn">Submit Order</button>
     </div>
@@ -40,15 +58,56 @@
     <div id="errorMsg" class="error">Please fill out all fields.</div>
 
     <script>
+      // -----------------------------------------------------------------------
+      // BUG 1: Promo validation logic is INVERTED.
+      // Valid codes (SAVE10, WELCOME20) show "Invalid promo code!" in red.
+      // Invalid / empty codes show "Promo code applied!" in green.
+      // -----------------------------------------------------------------------
+      const VALID_PROMOS = { SAVE10: 10, WELCOME20: 20 };
+      let appliedDiscount = 0;
+
+      document
+        .getElementById("applyPromoBtn")
+        .addEventListener("click", function () {
+          const code = document.getElementById("promoCode").value.trim().toUpperCase();
+          const promoResult = document.getElementById("promoResult");
+          const discountDisplay = document.getElementById("discountDisplay");
+
+          // BUG 1: condition checks !VALID_PROMOS[code] — inverted
+          if (!VALID_PROMOS[code]) {
+            // This branch runs for VALID codes — shows success incorrectly
+            appliedDiscount = VALID_PROMOS[code] || 0;
+            promoResult.textContent = "Promo code applied! You save " + appliedDiscount + "%.";
+            promoResult.style.color = "green";
+            promoResult.style.display = "block";
+            discountDisplay.style.display = "none";
+          } else {
+            // This branch runs for INVALID codes — shows error incorrectly
+            appliedDiscount = 0;
+            promoResult.textContent = "Invalid promo code!";
+            promoResult.style.color = "red";
+            promoResult.style.display = "block";
+            discountDisplay.style.display = "none";
+          }
+        });
+
+      // -----------------------------------------------------------------------
+      // BUG 2: Submit validates email format, but the promo discount is
+      // NEVER reflected in successMsg — even when a valid (or any) code is used.
+      // successMsg always says "Order processed successfully!" with no
+      // mention of the discount, so checking for discount text will always fail.
+      // -----------------------------------------------------------------------
       document
         .getElementById("submitOrderBtn")
         .addEventListener("click", function () {
           const email = document.getElementById("email").value;
           const card = document.getElementById("cardNumber").value;
 
-          // Validate: both fields must be filled AND email must be a valid format
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (email && card && emailRegex.test(email)) {
+            // BUG 2: discount not included in success message
+            document.getElementById("successMsg").textContent =
+              "Order processed successfully!";
             document.getElementById("successMsg").style.display = "block";
             document.getElementById("errorMsg").style.display = "none";
           } else {
