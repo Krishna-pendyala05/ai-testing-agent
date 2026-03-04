@@ -12,6 +12,7 @@ jobs:
     permissions:
       pull-requests: write # post PR comment
       contents: write # commit report back to the branch
+      checks: write # create check runs via API
 
     steps:
       - name: Checkout Code

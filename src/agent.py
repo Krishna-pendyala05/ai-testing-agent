@@ -528,7 +528,8 @@ if __name__ == "__main__":
     final_state = initial_state
     for event in agent.stream(initial_state):
         step_name = list(event.keys())[0]
-        final_state = event[step_name]
+        if event[step_name] is not None:
+            final_state = event[step_name]
 
     print("\n--- Agent Run Complete ---")
     
