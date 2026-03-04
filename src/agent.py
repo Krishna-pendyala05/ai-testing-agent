@@ -273,7 +273,7 @@ def node_execute_tests(state: AgentState) -> dict:
     report_file = os.path.join(workspace, "report.html")
 
     print(f"\n[Agent] Step 4/4 — Executing test script (Attempt {attempt}) ...")
-    print(f"--- GENERATED TEST CODE (saved to {test_file}) ---")
+    print("--- GENERATED TEST CODE ---")
     print(code)
     print("---")
 
