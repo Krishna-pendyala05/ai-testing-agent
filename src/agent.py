@@ -525,7 +525,13 @@ if __name__ == "__main__":
     }
 
     print("\n--- Autonomous AI Testing Agent Starting ---\n")
+    final_state = initial_state
     for event in agent.stream(initial_state):
-        pass  # Nodes print their own status updates
+        step_name = list(event.keys())[0]
+        final_state = event[step_name]
 
     print("\n--- Agent Run Complete ---")
+    
+    if final_state.get("execution_status") == "failure":
+        print("[Agent] Exiting with code 1 due to test failures.")
+        sys.exit(1)

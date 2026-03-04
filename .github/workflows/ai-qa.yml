@@ -93,6 +93,20 @@ jobs:
             git commit -m "ci: add AI test report for PR #${{ github.event.pull_request.number }} [skip ci]"
           git push origin ${{ github.head_ref }}
 
+          # Manually create a Check Run on the new commit so the PR UI shows the status
+          NEW_SHA=$(git rev-parse HEAD)
+          if [ "${{ job.status }}" == "success" ]; then
+            CONCLUSION="success"
+          else
+            CONCLUSION="failure"
+          fi
+
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/check-runs \
+            -d "{\"name\": \"Autonomous AI Testing Agent\", \"head_sha\": \"$NEW_SHA\", \"status\": \"completed\", \"conclusion\": \"$CONCLUSION\"}"
+
       # -----------------------------------------------------------------------
       # Also upload the report as a downloadable Actions artifact (14-day retention).
       # Named with the PR number for clear identification.
