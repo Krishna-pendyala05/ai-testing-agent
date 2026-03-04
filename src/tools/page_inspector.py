@@ -82,10 +82,12 @@ def inspect_page(url: str) -> str:
                 el_id = el.get_attribute("id") or ""
                 keywords = ["msg", "error", "success", "alert", "warn", "info", "notification", "feedback"]
                 if any(kw in el_id.lower() for kw in keywords):
-                    el_text = el.inner_text().strip()
+                    el_text = el.evaluate("el => el.textContent.trim()")
                     el_class = el.get_attribute("class") or ""
+                    el_visible = el.is_visible()
+                    visibility_note = "" if el_visible else " [hidden by default]"
                     feedback_lines.append(
-                        f'  id="{el_id}" class="{el_class}": "{el_text}"'
+                        f'  id="{el_id}" class="{el_class}"{visibility_note}: "{el_text}"'
                     )
             if feedback_lines:
                 lines.append("\nFeedback / Message Elements (for assertions):")

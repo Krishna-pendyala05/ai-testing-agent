@@ -17,6 +17,7 @@ Usage (local dev mode — no args needed):
 """
 
 import os
+import re
 import sys
 import tempfile
 import subprocess
@@ -24,6 +25,7 @@ import textwrap
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
+from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
@@ -38,6 +40,10 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY")  # e.g. "owner/repo"
+
+# Ollama fallback config (override via env vars if needed)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "llama3")
 
 if not GROQ_API_KEY:
     print("WARNING: GROQ_API_KEY is not set. Ensure it is passed via environment variables in CI/CD.")
@@ -57,13 +63,40 @@ class AgentState(TypedDict):
     attempt_number: int      # 1-indexed attempt count (starts at 1 for first run)
 
 # ---------------------------------------------------------------------------
-# LLM
+# LLM  —  Groq primary, Ollama fallback on rate-limit
 # ---------------------------------------------------------------------------
 llm = ChatGroq(
     temperature=0,
     model_name="llama-3.3-70b-versatile",
-    groq_api_key=GROQ_API_KEY
+    groq_api_key=GROQ_API_KEY,
+    request_timeout=60,
 )
+
+llm_fallback = ChatOllama(
+    base_url=OLLAMA_BASE_URL,
+    model=OLLAMA_MODEL,
+    temperature=0,
+)
+
+
+def invoke_llm(messages: list) -> object:
+    """
+    Try Groq first.  If a rate-limit (429 / RateLimitError) is returned,
+    automatically fall back to the local Ollama instance.
+    Any other exception is re-raised so the caller can surface it.
+    """
+    try:
+        return llm.invoke(messages)
+    except Exception as exc:
+        exc_str = str(exc).lower()
+        # Groq surfaces rate limits as status 429 or the word 'rate_limit'
+        if "429" in exc_str or "rate_limit" in exc_str or "rate limit" in exc_str:
+            print(
+                f"[Agent] ⚠️  Groq rate limit hit — switching to Ollama "
+                f"({OLLAMA_MODEL} @ {OLLAMA_BASE_URL}) ..."
+            )
+            return llm_fallback.invoke(messages)
+        raise
 
 # ---------------------------------------------------------------------------
 # Node 1: Page Inspector  (THE FIX — agent now SEES the real app)
@@ -106,7 +139,7 @@ def node_analyze_requirements(state: AgentState) -> dict:
         Be precise. Only test things relevant to the PR.
     """).strip()
 
-    response = llm.invoke([HumanMessage(content=prompt)])
+    response = invoke_llm([HumanMessage(content=prompt)])
     print("[Agent] Requirements analysis complete.")
     return {"test_requirements": response.content}
 
@@ -190,13 +223,16 @@ def node_generate_tests(state: AgentState) -> dict:
 
         base_prompt += "\n\n" + heal_context
 
-    response = llm.invoke([HumanMessage(content=base_prompt)])
+    response = invoke_llm([HumanMessage(content=base_prompt)])
 
-    # Strip any markdown fences the LLM may still include
+    # Robustly extract the first fenced code block the LLM may have wrapped
     code = response.content.strip()
-    for fence in ["```python", "```"]:
-        code = code.replace(fence, "")
-    code = code.strip()
+    match = re.search(r"```(?:python)?\n(.*?)```", code, re.DOTALL)
+    if match:
+        code = match.group(1).strip()
+    else:
+        # Fallback: strip any stray fence markers globally
+        code = re.sub(r"```(?:python)?", "", code).strip()
 
     return {"generated_test_code": code}
 
@@ -308,19 +344,11 @@ def node_report_results(state: AgentState) -> dict:
     logs = state.get("execution_logs", "")
     total_attempts = state.get("attempt_number", 1) - 1  # attempts completed
 
-    # Parse test counts from pytest output
-    passed = failed = 0
-    for line in logs.splitlines():
-        if " passed" in line:
-            try:
-                passed = int(line.strip().split(" passed")[0].split()[-1])
-            except (ValueError, IndexError):
-                pass
-        if " failed" in line:
-            try:
-                failed = int(line.strip().split(" failed")[0].split()[-1])
-            except (ValueError, IndexError):
-                pass
+    # Parse test counts from pytest final summary line (robust regex)
+    passed_match = re.search(r"(\d+) passed", logs)
+    failed_match = re.search(r"(\d+) failed", logs)
+    passed = int(passed_match.group(1)) if passed_match else 0
+    failed = int(failed_match.group(1)) if failed_match else 0
 
     badge = "✅ PASSED" if status == "success" else "❌ FAILED"
     comment_body = textwrap.dedent(f"""
