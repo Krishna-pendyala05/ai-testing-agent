@@ -10,17 +10,19 @@ jobs:
     name: Run AI QA Agent
 
     permissions:
-      pull-requests: write # Required to post PR comments
-      contents: read
+      pull-requests: write # post PR comment
+      contents: write # commit report back to the branch
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Fetch the actual PR branch so we can commit the report back
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       # -----------------------------------------------------------------------
-      # Start the target application as a proper background service.
-      # We serve the app/ directory explicitly so index.html is at root.
-      # A curl retry loop waits until the server is actually ready.
+      # Start the target application as a background service.
       # -----------------------------------------------------------------------
       - name: Start Target Application
         run: |
@@ -37,18 +39,13 @@ jobs:
         run: docker build -t ai-testing-agent .
 
       # -----------------------------------------------------------------------
-      # Create a shared workspace directory for test artifacts (reports, scripts)
+      # Shared workspace for test artifacts
       # -----------------------------------------------------------------------
       - name: Prepare Workspace
         run: mkdir -p $GITHUB_WORKSPACE/agent-workspace
 
       # -----------------------------------------------------------------------
       # Run the agent inside Docker.
-      # --network host  → lets the container reach localhost:8080
-      # -v workspace    → saves test_generated.py, report.html to the host
-      # WORKSPACE_DIR   → tells agent.py where to write artifacts
-      # GITHUB_TOKEN    → used by PyGithub to post PR comments
-      # GITHUB_REPOSITORY → "owner/repo" string, injected automatically
       # -----------------------------------------------------------------------
       - name: Execute AI Testing Agent
         env:
@@ -69,13 +66,41 @@ jobs:
             $PR_NUMBER "$PR_BODY" "$TARGET_URL"
 
       # -----------------------------------------------------------------------
-      # Upload the HTML test report as a downloadable GitHub Actions artifact
-      # so developers can view the full report from the Actions tab.
+      # Commit the generated HTML report back into the repository so it is
+      # permanently linked to this PR and visible without downloading artifacts.
+      # The [skip ci] suffix prevents an infinite Actions loop.
       # -----------------------------------------------------------------------
-      - name: Upload Test Report
-        if: always() # always upload — even on failure, results are useful
+      - name: Save Report to artifact-generated-for-test-PR/
+        if: always()
+        run: |
+          REPORT_SRC="$GITHUB_WORKSPACE/agent-workspace/report.html"
+          REPORT_DEST="artifact-generated-for-test-PR/report-pr-${{ github.event.pull_request.number }}.html"
+
+          if [ ! -f "$REPORT_SRC" ]; then
+            echo "No report found at $REPORT_SRC — skipping commit."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          mkdir -p artifact-generated-for-test-PR
+          cp "$REPORT_SRC" "$REPORT_DEST"
+          git add artifact-generated-for-test-PR/
+
+          # Only commit if there is something new
+          git diff --staged --quiet || \
+            git commit -m "ci: add AI test report for PR #${{ github.event.pull_request.number }} [skip ci]"
+          git push origin ${{ github.head_ref }}
+
+      # -----------------------------------------------------------------------
+      # Also upload the report as a downloadable Actions artifact (14-day retention).
+      # Named with the PR number for clear identification.
+      # -----------------------------------------------------------------------
+      - name: Upload Test Report Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-test-report
+          name: ai-test-report-pr-${{ github.event.pull_request.number }}
           path: ${{ github.workspace }}/agent-workspace/report.html
           retention-days: 14

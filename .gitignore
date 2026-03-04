@@ -17,5 +17,7 @@ __pycache__/
 
 # Node
 package.json
+
+#Others
 execute-ai-testing-agent-github-action-logs.txt
 report.html
